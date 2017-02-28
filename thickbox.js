@@ -4,8 +4,13 @@
  * Copyright (c) 2007 cody lindley
  * Licensed under the MIT License: http://www.opensource.org/licenses/mit-license.php
 */
-		  
-var tb_pathToImage = "images/loadingAnimation.gif";
+
+/*
+ * Fix tb_position() issue
+ */
+var matched,browser;jQuery.uaMatch=function(b){b=b.toLowerCase();var a=/(chrome)[ \/]([\w.]+)/.exec(b)||/(webkit)[ \/]([\w.]+)/.exec(b)||/(opera)(?:.*version|)[ \/]([\w.]+)/.exec(b)||/(msie) ([\w.]+)/.exec(b)||b.indexOf("compatible")<0&&/(mozilla)(?:.*? rv:([\w.]+)|)/.exec(b)||[];return{browser:a[1]||"",version:a[2]||"0"}};matched=jQuery.uaMatch(navigator.userAgent);browser={};if(matched.browser){browser[matched.browser]=true;browser.version=matched.version}if(browser.chrome){browser.webkit=true}else{if(browser.webkit){browser.safari=true}}jQuery.browser=browser;
+
+var tb_pathToImage = "loadingAnimation.gif";
 
 /*!!!!!!!!!!!!!!!!! edit below this line at your own risk !!!!!!!!!!!!!!!!!!!!!!!*/
 
@@ -19,16 +24,23 @@ $(document).ready(function(){
 //add thickbox to href & area elements that have a class of .thickbox
 function tb_init(domChunk){
 	$(domChunk).click(function(){
-	var t = this.title || this.name || null;
-	var a = this.href || this.alt;
-	var g = this.rel || false;
-	tb_show(t,a,g);
-	this.blur();
-	return false;
+        var t = this.title || this.name || null;
+        var a = this.href || this.alt;
+        var g = this.rel || false;
+         
+        /**
+         * Get all extra attributes
+         */
+        var _class = $(this).attr('data-class') || null;
+        var _callback = $(this).attr('data-callback') || null;
+
+        tb_show(t, a, g, _class, _callback);
+        this.blur();
+        return false;
 	});
 }
 
-function tb_show(caption, url, imageGroup) {//function called when the user clicks on a thickbox link
+function tb_show(caption, url, imageGroup, _class, _callback) {//function called when the user clicks on a thickbox link
 
 	try {
 		if (typeof document.body.style.maxHeight === "undefined") {//if IE 6
@@ -95,7 +107,7 @@ function tb_show(caption, url, imageGroup) {//function called when the user clic
 						}
 				}
 			}
-
+            
 			imgPreloader = new Image();
 			imgPreloader.onload = function(){		
 			imgPreloader.onload = null;
@@ -171,7 +183,7 @@ function tb_show(caption, url, imageGroup) {//function called when the user clic
 					}
 				}	
 			};
-			
+                
 			tb_position();
 			$("#TB_load").remove();
 			$("#TB_ImageOff").click(tb_remove);
@@ -213,31 +225,31 @@ function tb_show(caption, url, imageGroup) {//function called when the user clic
 						$("#TB_ajaxWindowTitle").html(caption);
 					}
 			}
-					
+
 			$("#TB_closeWindowButton").click(tb_remove);
 			
-				if(url.indexOf('TB_inline') != -1){	
-					$("#TB_ajaxContent").append($('#' + params['inlineId']).children());
-					$("#TB_window").unload(function () {
-						$('#' + params['inlineId']).append( $("#TB_ajaxContent").children() ); // move elements back when you're finished
-					});
-					tb_position();
-					$("#TB_load").remove();
-					$("#TB_window").css({display:"block"}); 
-				}else if(url.indexOf('TB_iframe') != -1){
-					tb_position();
-					if($.browser.safari){//safari needs help because it will not fire iframe onload
-						$("#TB_load").remove();
-						$("#TB_window").css({display:"block"});
-					}
-				}else{
-					$("#TB_ajaxContent").load(url += "&random=" + (new Date().getTime()),function(){//to do a post change this load method
-						tb_position();
-						$("#TB_load").remove();
-						tb_init("#TB_ajaxContent a.thickbox");
-						$("#TB_window").css({display:"block"});
-					});
-				}
+            if(url.indexOf('TB_inline') != -1){	
+                $("#TB_ajaxContent").append($('#' + params['inlineId']).children());
+                $("#TB_window").unload(function () {
+                    $('#' + params['inlineId']).append( $("#TB_ajaxContent").children() ); // move elements back when you're finished
+                });
+                tb_position();
+                $("#TB_load").remove();
+                $("#TB_window").css({display:"block"}); 
+            }else if(url.indexOf('TB_iframe') != -1){
+                tb_position();
+                if($.browser.safari){//safari needs help because it will not fire iframe onload
+                    $("#TB_load").remove();
+                    $("#TB_window").css({display:"block"});
+                }
+            }else{
+                $("#TB_ajaxContent").load(url += "&random=" + (new Date().getTime()),function(){//to do a post change this load method
+                    tb_position();
+                    $("#TB_load").remove();
+                    tb_init("#TB_ajaxContent a.thickbox");
+                    $("#TB_window").css({display:"block"});
+                });
+            }
 			
 		}
 
@@ -256,6 +268,31 @@ function tb_show(caption, url, imageGroup) {//function called when the user clic
 		
 	} catch(e) {
 		//nothing here
+	}
+    
+    
+    /**
+     * @author JS
+     *
+     * Call callback when provided
+     */
+    $(document.body).addClass('TB-open');
+    /*
+     * Add custom class to thickbox window
+     */
+    if (_class) {
+        $(document.body).find('#TB_window').addClass(_class);
+    }
+    
+    /*
+     * Call a callback if provided
+     */
+    if (_callback) {
+        if (typeof _callback === "string") {
+            eval(_callback)();
+        } else {
+            _callback();
+        }
 	}
 }
 
@@ -276,12 +313,17 @@ function tb_remove() {
 	}
 	document.onkeydown = "";
 	document.onkeyup = "";
+    
+    /**
+     * Fix thickbox bg scroll
+     */
+    $(document.body).removeClass('TB-open');
 	return false;
 }
 
 function tb_position() {
-$("#TB_window").css({marginLeft: '-' + parseInt((TB_WIDTH / 2),10) + 'px', width: TB_WIDTH + 'px'});
-	if ( !(jQuery.browser.msie && jQuery.browser.version < 7)) { // take away IE6
+    $("#TB_window").css({marginLeft: '-' + parseInt((TB_WIDTH / 2),10) + 'px', width: TB_WIDTH + 'px'});
+    if ( !(jQuery.browser.msie && jQuery.browser.version < 7)) { // take away IE6
 		$("#TB_window").css({marginTop: '-' + parseInt((TB_HEIGHT / 2),10) + 'px'});
 	}
 }

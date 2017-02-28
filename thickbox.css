@@ -161,3 +161,8 @@ margin-top: expression(0 - parseInt(this.offsetHeight / 2) + (TBWindowMargin = d
 	margin-top:1px;
 	_margin-bottom:1px;
 }
+
+/*
+Class helper for opened dialog
+*/
+body.TB-open{overflow:hidden!important;left:0;right:0;width:100%}
